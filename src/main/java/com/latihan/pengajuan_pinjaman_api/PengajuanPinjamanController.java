@@ -1,6 +1,8 @@
 package com.latihan.pengajuan_pinjaman_api;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -37,8 +39,11 @@ public class PengajuanPinjamanController {
     //   terus "ubah" otomatis jadi objek PengajuanPinjaman.
     //   Kita GAK PERLU manual gson.fromJson() lagi kayak kode SP3K dulu!
     @PostMapping("/simpan")
-    public PengajuanPinjaman simpan(@RequestBody PengajuanPinjaman data) {
-        return service.simpanPengajuan(data.getNama(), data.getJumlahPinjaman());
+    public ApiResponse<PengajuanPinjaman> simpan(@RequestBody PengajuanPinjaman data) {
+//        return service.simpanPengajuan(data.getNama(), data.getJumlahPinjaman());
+        PengajuanPinjaman hasil = service.simpanPengajuan(data.getNama(), data.getJumlahPinjaman());
+
+        return ApiResponse.success(hasil);
     }
 
     // ========================================================
@@ -46,17 +51,27 @@ public class PengajuanPinjamanController {
     // ========================================================
     // Alamat lengkapnya: GET /pengajuan/semua
     @GetMapping("/semua")
-    public List<PengajuanPinjaman> semua() {
-        return service.getSemuaPengajuan();
+    public ApiResponse<List<PengajuanPinjaman>> semua() {
+        return ApiResponse.success(service.getSemuaPengajuan());
     }
 
     @DeleteMapping("/hapus/{id}")
-    public boolean hapus(@PathVariable String id){
-        return service.hapusPinjaman(id);
+    public ApiResponse<Void> hapus(@PathVariable String id){
+        boolean berhasil = service.hapusPengajuan(id);
+
+        if (!berhasil){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Data Pengajuan Tidak Ditemukan");
+        }
+        return ApiResponse.success(null);
     }
 
     @PutMapping("/ubah/{id}")
-    public boolean ubah(@PathVariable String id, @RequestBody PengajuanPinjaman data){
-        return service.ubahPinjaman(id, data.getNama(), data.getJumlahPinjaman());
+    public ApiResponse<Void> ubah(@PathVariable String id, @RequestBody PengajuanPinjaman data){
+        boolean berhasil = service.ubahPengajuan(id, data.getNama(), data.getJumlahPinjaman());
+
+        if(!berhasil){
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Data Pengajuan Tidak Ditemukan");
+        }
+        return ApiResponse.success(null);
     }
 }

@@ -1,6 +1,6 @@
 # Pengajuan Pinjaman API
 
-REST API sederhana untuk mengelola data pengajuan pinjaman, dibuat dengan Spring Boot. Proyek latihan untuk mendalami pembuatan REST API: operasi CRUD, validasi input, dan penggunaan status HTTP.
+REST API sederhana untuk mengelola data pengajuan pinjaman, dibuat dengan Spring Boot. Proyek latihan untuk mendalami pembuatan REST API: operasi CRUD, validasi input, dan format response yang konsisten.
 
 ## Teknologi
 
@@ -13,7 +13,8 @@ REST API sederhana untuk mengelola data pengajuan pinjaman, dibuat dengan Spring
 - CRUD data pengajuan pinjaman (data disimpan di memori)
 - Setiap pengajuan memiliki `id` unik (UUID) yang dibuat oleh server
 - Validasi input: nama wajib diisi dan jumlah pinjaman minimal Rp100.000
-- Input tidak valid ditolak dengan status HTTP `400 Bad Request`
+- Format response seragam untuk sukses maupun gagal
+- Status HTTP sesuai hasil proses (`400` untuk input tidak valid, `404` untuk data tidak ditemukan)
 
 ## Endpoint
 
@@ -24,9 +25,17 @@ REST API sederhana untuk mengelola data pengajuan pinjaman, dibuat dengan Spring
 | PUT | `/pengajuan/ubah/{id}` | Mengubah nama dan jumlah pinjaman |
 | DELETE | `/pengajuan/hapus/{id}` | Menghapus pengajuan |
 
-### Contoh: menyimpan pengajuan
+## Format Response
 
-**Request**
+Semua endpoint mengembalikan struktur yang sama:
+
+| Field | Keterangan |
+|---|---|
+| `errorCode` | `"00"` jika sukses, `"01"` jika gagal |
+| `errorMessage` | Pesan hasil proses |
+| `object` | Data hasil proses, `null` jika tidak ada data |
+
+### Menyimpan pengajuan
 
 ```
 POST /pengajuan/simpan
@@ -35,85 +44,110 @@ Content-Type: application/json
 
 ```json
 {
-  "nama": "Budi",
-  "jumlahPinjaman": 5000000
+  "nama": "Andi",
+  "jumlahPinjaman": 500000
 }
 ```
 
-**Response sukses** (HTTP 200)
+Response sukses (HTTP 200):
 
 ```json
 {
-  "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
-  "nama": "Budi",
-  "jumlahPinjaman": 5000000.0
+  "errorCode": "00",
+  "errorMessage": "Success",
+  "object": {
+    "id": "6ccc3aa9-bf69-4cdd-b1fa-a66de443e219",
+    "nama": "Andi",
+    "jumlahPinjaman": 500000.0
+  }
 }
 ```
 
-**Response gagal** (HTTP 400), misalnya jumlah pinjaman di bawah Rp100.000
+Response gagal, misalnya jumlah pinjaman di bawah Rp100.000 (HTTP 400):
 
 ```json
 {
-  "timestamp": "2026-10-23T10:55:04.986Z",
-  "status": 400,
-  "error": "Bad Request",
-  "message": "Data Pengajuan Tidak Valid",
-  "path": "/pengajuan/simpan"
+  "errorCode": "01",
+  "errorMessage": "Data Pengajuan Tidak Valid",
+  "object": null
 }
 ```
-### Contoh: mengubah pengajuan
 
-**Request**
+### Menampilkan semua pengajuan
 
 ```
-PUT /pengajuan/ubah/eac5e446-c516-49d7-8d7c-5396a3bb7621
+GET /pengajuan/semua
+```
+
+Response (HTTP 200):
+
+```json
+{
+  "errorCode": "00",
+  "errorMessage": "Success",
+  "object": [
+    {
+      "id": "ecceb910-2b3c-4087-a32d-4c05ff15f358",
+      "nama": "Joni",
+      "jumlahPinjaman": 700000.0
+    },
+    {
+      "id": "6ccc3aa9-bf69-4cdd-b1fa-a66de443e219",
+      "nama": "Andi",
+      "jumlahPinjaman": 500000.0
+    }
+  ]
+}
+```
+
+### Mengubah pengajuan
+
+```
+PUT /pengajuan/ubah/{id}
 Content-Type: application/json
 ```
 
 ```json
 {
-  "nama": "Budi",
-  "jumlahPinjaman": 9000000
+  "nama": "Joni",
+  "jumlahPinjaman": 3000000
 }
 ```
-**Response sukses** (HTTP 200)
+
+Response sukses (HTTP 200):
 
 ```json
-true
+{
+  "errorCode": "00",
+  "errorMessage": "Success",
+  "object": null
+}
 ```
-**Response gagal** (HTTP 200)
+
+### Menghapus pengajuan
+
+```
+DELETE /pengajuan/hapus/{id}
+```
+
+Response sukses (HTTP 200) sama seperti perubahan di atas.
+
+Jika `id` tidak ditemukan, endpoint PUT dan DELETE mengembalikan HTTP 404:
 
 ```json
-false
+{
+  "errorCode": "01",
+  "errorMessage": "Data Pengajuan Tidak Ditemukan",
+  "object": null
+}
 ```
-### Contoh: menghapus pengajuan
-
-**Request**
-
-```
-PUT /pengajuan/hapus/eac5e446-c516-49d7-8d7c-5396a3bb7621
-Content-Type: application/json
-```
-
-**Response sukses** (HTTP 200)
-
-```json
-true
-```
-**Response gagal** (HTTP 200)
-
-```json
-false
-```
-<!-- VERIFIKASI: kirim POST sukses dan POST dengan jumlahPinjaman 50000 di Postman, lalu samakan kedua contoh response di atas (termasuk status code dan ada tidaknya field "message") dengan hasil aslinya. -->
-<!-- TODO: tambahkan contoh request dan response untuk GET, PUT, dan DELETE setelah dicek di Postman. -->
 
 ## Cara Menjalankan
 
 Prasyarat: JDK 17.
 
 ```bash
-git clone https://github.com/pikribahtiar/pengajuan-pinjaman-api
+git clone https://github.com/pikribahtiar/pengajuan-pinjaman-api.git
 cd pengajuan-pinjaman-api
 ./mvnw spring-boot:run
 ```
@@ -133,19 +167,21 @@ Menjalankan test:
 | `PengajuanPinjamanController` | Menerima request HTTP dan meneruskannya ke Service |
 | `PengajuanPinjamanService` | Logika bisnis dan validasi |
 | `PengajuanPinjaman` | Model data pengajuan |
+| `ApiResponse` | Pembungkus response dengan format seragam |
+| `GlobalExceptionHandler` | Mengubah exception menjadi response berformat `ApiResponse` |
 
 ## Catatan Desain
 
 - **Controller dibuat tipis.** Logika bisnis dan validasi ada di Service, sehingga aturan hanya ditulis di satu tempat.
 - **Penunjuk data memakai `id`, bukan `nama`.** Pada versi awal, data ditunjuk lewat nama sehingga dua pengajuan dengan nama yang sama bisa saling bertabrakan. Sekarang setiap data punya `id` UUID.
-- **Validasi lewat `ResponseStatusException`.** Service melempar exception saat input tidak valid, dan Spring mengubahnya menjadi response dengan status `400`. Format body error masih mengikuti format bawaan Spring.
+- **Format error seragam.** Service melempar `ResponseStatusException`, lalu `@RestControllerAdvice` mengubahnya menjadi `ApiResponse` sambil mempertahankan status HTTP yang sesuai.
 
 ## Keterbatasan dan Rencana Pengembangan
 
 - Data disimpan di memori (`ArrayList`), sehingga hilang saat aplikasi di-restart.
+- Error di luar `ResponseStatusException` (misalnya body JSON yang rusak) masih memakai format bawaan Spring.
 - Rencana pengembangan:
-    - Menyimpan data ke database dengan Spring Data JPA
-    - Validasi input dengan Bean Validation (`@Valid`)
-    - Format response error yang seragam dengan `@RestControllerAdvice`
-    - Unit test untuk `PengajuanPinjamanService`
-    - Dokumentasi API dengan OpenAPI/Swagger
+  - Menyimpan data ke database dengan Spring Data JPA
+  - Validasi input dengan Bean Validation (`@Valid`)
+  - Unit test untuk `PengajuanPinjamanService`
+  - Dokumentasi API dengan OpenAPI/Swagger
